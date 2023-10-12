@@ -1,4 +1,7 @@
 from django.db import models
+from django.utils import timezone
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.db import models
 
 status = [
     ("Pendente", "Pendente"),
@@ -9,56 +12,33 @@ status = [
 workStation = [("Posto1", "Posto1"), ("Posto2", "Posto2"), ("Posto3", "Posto3")]
 
 
-class CustomUserManager(models.Manager):
-    def create_user(self, name, password, email, age, **extra_fields):
+class CustomUserManager(BaseUserManager):
+    def create_user(self, name, password, **extra_fields):
         if not name:
             raise ValueError('O campo "username" é obrigatório.')
         if not password:
             raise ValueError('O campo "password" é obrigatório.')
-        if not email:
-            raise ValueError('O campo "email" é obrigatório.')
-        if not age:
-            raise ValueError('O campo "age" é obrigatório.')
-
-        user = self.model(username=name, email=email, age=age, **extra_fields)
+        user = self.model(name=name, password=password, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
 
-class User(models.Model):
-    name = models.CharField(max_length=200, null=False, blank=False)
+class User(AbstractBaseUser, PermissionsMixin):
+    username = models.CharField(max_length=200, null=False, blank=False,unique=True)
     age = models.IntegerField(null=False, blank=False)
     email = models.CharField(max_length=200, null=False, blank=False)
     password = models.CharField(max_length=200, null=False, blank=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-
+    is_employee = models.BooleanField(default=False)
     objects = CustomUserManager()
 
-    USERNAME_FIELD = "name"
-    REQUIRED_FIELDS = ["name", "age", "email", "password"]
-
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = ['password','email','password',"is_employee"]
+    
     def __str__(self):
-        return self.name
-
-
-class Employee(models.Model):
-    name = models.CharField(max_length=200, null=False, blank=False)
-    age = models.IntegerField(null=False, blank=False)
-    email = models.CharField(max_length=200, null=False, blank=False)
-    password = models.CharField(max_length=200, null=False, blank=False)
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
-
-    objects = CustomUserManager()
-
-    USERNAME_FIELD = "name"
-    REQUIRED_FIELDS = ["name", "age", "email", "password"]
-
-    def __str__(self):
-        return self.name
-
+        return self.username
 
 class CategoryServices(models.Model):
     name = models.CharField(max_length=200, null=False, blank=False)
@@ -76,7 +56,7 @@ class Services(models.Model):
     categoryServicesFk = models.ManyToManyField(
         CategoryServices, related_name="services"
     )
-    employee = models.ManyToManyField(Employee, related_name="employeeServices")
+    employee = models.ManyToManyField(User, related_name="employeeServices")
 
     def __str__(self):
         return self.name
@@ -150,8 +130,10 @@ class Maintenance(models.Model):
     )
     desc = models.CharField(max_length=200, null=False, blank=False)
     productsFk = models.ManyToManyField(Products, related_name="maintenanceTools")
+    discount = models.DecimalField(decimal_places=2,max_digits=5 ,null =True)
+    value = models.DecimalField(decimal_places=2,max_digits=5,null =True)
     employeeFk = models.ForeignKey(
-        Employee,
+        User,
         on_delete=models.CASCADE,
         null=False,
         blank=False,
@@ -178,3 +160,7 @@ class Maintenance(models.Model):
     def save(self, *args, **kwargs):
         self.quantityStock -= self.productsUsedQuant
         super(Products, self).save(*args, **kwargs)
+    
+    def save(self, *args, **kwargs):
+        self.value = self.value - self.discount
+        super(Maintenance,self).save

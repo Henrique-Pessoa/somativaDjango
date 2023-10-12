@@ -129,6 +129,8 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+AUTH_USER_MODEL = 'app.User'
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -137,8 +139,18 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'AUTH_HEADER_TYPES': ("Bearer",),
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=1), 
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+    'SLIDING_TOKEN_REFRESH_LIFETIME_ALTERNATIVE': timedelta(days=7),
+    'SLIDING_TOKEN_REFRESH_MAX_LIFETIME': timedelta(days=14),
+    'SLIDING_TOKEN_REFRESH_SILENT_LIFETIME': timedelta(days=30),
+    'SLIDING_TOKEN_REFRESH_SILENT_LIFETIME_ALTERNATIVE': timedelta(days=60),
+    'SLIDING_TOKEN_REFRESH_SILENT_MAX_LIFETIME': timedelta(days=90),
+    'ROTATE_REFRESH_TOKENS': False,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
 AUTHENTICATION_BACKENDS = [

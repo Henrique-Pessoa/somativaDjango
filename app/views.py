@@ -27,17 +27,26 @@ class CustomAdminPermission(BasePermission):
         )
 
 
-class CreateUserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = (CustomUserPermission,)
+class UserCreateViewSet(APIView):
+    permission_classes=[CustomUserPermission,]
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            print(f"A senha configurada para {user.username} é: {user.password}")
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request):
+        User = get_user_model()  
+        users = User.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
 
 
 class LoginViewSet(APIView):
     def post(self, request):
-        username = request.data.get("username")
-        password = request.data.get("password")
-        print(username, password)
+        username = request.data.get('username')
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
@@ -45,21 +54,18 @@ class LoginViewSet(APIView):
         if user is not None:
             refresh = RefreshToken.for_user(user)
             tokens = {
-                "refresh": str(refresh),
-                "access": str(refresh.access_token),
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
             }
             return Response(tokens, status=status.HTTP_200_OK)
         else:
-            return Response(
-                {"error": "Credenciais inválidas"}, status=status.HTTP_401_UNAUTHORIZED
-            )
+            return Response({'error': 'Credenciais inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductsSerializer
     queryset = Products.objects.all()
-    permission_classes = [IsAdminUser]
-
+    permission_classes=[IsAuthenticated]
     def get_queryset(self):
         quantityStock = self.request.query_params.get("quantityStock")
         if quantityStock is not None:
